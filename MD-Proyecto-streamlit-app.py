@@ -47,17 +47,57 @@ variable = st.selectbox("Variable", ["Alcaldía","Descripción del Flujo","DESC_
                                      "DESC_ESTATUS","INFORMACION_CONTRATOS"])
 st.pyplot(graficaFrecuencia(variable))
 
+
+
 def diagramaDeCaja(variable_monto):
     fig = plt.figure(figsize=(5,4))
-    ax = sns.boxplot(variable_monto,data=datos_recursos)
+    ax = sns.boxplot(x = variable_monto,data=datos_recursos)
     #ax.set_ylabel('Frecuencia',fontsize=10)
     ax.set_xlabel('')
     ax.set_title("Diagrama de caja del "+ variable_monto,fontsize=12)
     return fig
 
+st.header("Diagrama de caja de los montos de los proyectos en la CDMX de 2013 a 2019")
+
 variable_monto = st.selectbox("Variable Monto", ["Monto Aprobado","Monto Modificado","Monto Comprometido",
                                      "Monto Devengado","Monto Ejercido"])
 st.pyplot(diagramaDeCaja(variable_monto))
+
+datos_recursos2  = datos_recursos[datos_recursos['Ciclo'] >= 2019]
+
+def diagramaDeCaja4T(variable_montos):
+    variable_montos = variable_montos.title()
+    fig = plt.figure(figsize=(5,4))
+    
+    ax = sns.boxplot(x = variable_montos,data=datos_recursos2)
+    #ax.set_ylabel('Frecuencia',fontsize=10)
+    ax.set_xlabel('')
+    ax.set_title("Diagrama de caja del "+ variable_montos,fontsize=12)
+    return fig
+
+st.header("Diagrama de caja de los montos de los proyectos en la CDMX en la 4T")
+
+variable_montos = st.selectbox("Variable Montos", ["Monto aprobado","Monto modificado","Monto comprometido",
+                                     "Monto devengado","Monto ejercido"])
+st.pyplot(diagramaDeCaja4T(variable_montos))
+
+datos_recursos3 = datos_recursos[datos_recursos['Ciclo'] < 2019]
+
+def diagramaDeCajaNO4T(variables_montos):
+    variables_montos = variables_montos.title()
+    fig = plt.figure(figsize=(5,4))
+    
+    ax = sns.boxplot(x = variables_montos,data=datos_recursos3)
+    #ax.set_ylabel('Frecuencia',fontsize=10)
+    ax.set_xlabel('')
+    ax.set_title("Diagrama de caja del "+ variables_montos,fontsize=12)
+    return fig
+
+st.header("Diagrama de caja de los montos de los proyectos en la CDMX antes de la 4T")
+
+variables_montos = st.selectbox("Variables Montos", ["monto aprobado","monto modificado","monto comprometido",
+                                     "monto devengado","monto ejercido"])
+st.pyplot(diagramaDeCajaNO4T(variables_montos))
 
 
 ### KNN
@@ -78,7 +118,7 @@ y = datos_recursos_knn['CLAVE_INFORMACION_CONTRATOS']
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, random_state=42)
 
 
-knn = KNeighborsClassifier(n_neighbors=53,weights='distance',algorithm='brute',metric='manhattan')
+knn = KNeighborsClassifier(n_neighbors=44,weights='distance',algorithm='auto',metric='euclidean')
 knn.fit(X_train,y_train)
 
 dicc_categoria_proyecto = {'Otros Proyectos':0, 'Acción/Salud':1, 'Adquisición/Educación':2, 
@@ -154,7 +194,7 @@ X_train2, X_test2, y_train2, y_test2 = train_test_split(X2,y2,test_size = 0.2, r
 
 # pipeline como encapulador de pasos
 # el valor de C por defecto es 1.0, y proximamente mostraremos que es bueno
-logreg = LogisticRegression(random_state = 42)
+logreg = LogisticRegression(C=0.1,tol=1.0, fit_intercept=True, solver='saga', random_state = 42)
 logreg.fit(X_train2,y_train2)
 
 dicc_categoria_proyecto2 = {'otros proyectos':0, 'acción/salud':1, 'adquisición/educación':2, 
