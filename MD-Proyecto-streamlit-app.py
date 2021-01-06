@@ -14,6 +14,7 @@ from sklearn.model_selection import StratifiedKFold
 
 import geopandas as gpd
 #import statsmodels.api as sm
+
 import pymc3 as pm
 
 
@@ -439,10 +440,66 @@ select_recurso = st.selectbox("Monto por categoría", ['Descripción de la Categ
 st.dataframe(dict_frames[select_recurso])
 
 
+## Regresion lineal para poder observar los proyectos
+st.header("Regresion Lineal para detectar casos sospechosos de corrupción")
+st.write("Realizamos una regresión lineal sencilla donde contrastamos los montos Comprometidos vs los montos Pagados para de esta manera conoder la predicción del monto pagado con respecto a lo que se prometio originalmnte.")
+
+st.write("**Interpretación**: La linea de la regresión lineal muestra la relacióón entre los montos pagados y comprometidos, la idea teoríca es que si un proyecto se pago en su totalidad se acerque a la linea roja de la regresión pues se pago en su totalidad el proyecto. ")
+
+st.write("Si un punto esta por arriba de la regresión es un proyecto que se pago con recursos por arriba de lo comprometido.")
+st.write("Si un punto esta por debajo de la regresióón es un proyecto que aún no ha sido terminado de pagar en su totalidad.")
 
 
+# Implementamos la regresion lineal
+#@Mls21 Me falla porque no tengo la biblioteca statsmodel.api as sm, desbloquear esta linea e intentar desde ordenador propio
+'''
+agno_reg = st.selectbox("Años regresion", [ '2013','2014','2015','2016','2017','2018','2019'])
+
+def regresion_montos(agnio):
+    
+    hue = monto_sobrepasado(datos_dict[int(agnio)])
+    #hue = monto_sobrepasado(datos_2018_act)
 
 
+    sm.add_constant(hue['Monto Comprometido'])
+
+    parametros = sm.OLS(hue['Monto Pagado'], sm.add_constant(hue['Monto Comprometido'])).fit().params
+
+    print("parametros",parametros)
+
+    #sns.scatterplot(x='Monto Comprometido', y ='Monto Pagado', data=hue)
+
+
+    y_est = parametros[0] + parametros[1]*hue['Monto Comprometido']
+
+    # Graficamos una regresion lineal para el modelo
+    fig =plt.figure(figsize=(10,8))
+    plt.title("Reg lineal montos")
+    plt.scatter(hue['Monto Comprometido'], hue['Monto Pagado'], label="comprometido vs pagado")
+    plt.plot(hue['Monto Comprometido'], y_est, color="red")
+    plt.grid()
+    plt.ylabel("Monto Pagado")
+    plt.xlabel("Monto Comprometido")
+    plt.legend()
+    return(fig)
+
+st.pyplot(regresion_montos(agno_reg))
+'''
+
+# Montos por programas. 
+
+st.header("Programas y montos Pagados")
+st.write("Colocamos los programas y montos pagados por año, esto nos permite identifica a los programas por su descripción, la descripción de su recurso y la cantidad de montos pagados de cada programa para ver la cifra final de dinero invertido en cada uno de los programas")
+
+def programas_montos(agnio):
+    dt_ant = pd.pivot_table(data=datos_dict_ant[agnio], index=['Descripción del Programa Presupuestario','Descripción del recurso'], columns=['Ciclo'],
+                            values='montos_pagados', aggfunc='sum')
+    return(dt_ant)
+
+p_montos = st.selectbox("Programas Montos", [ '2013','2014','2015','2016','2017','2018','2019'])
+
+
+st.dataframe(programas_montos(int(p_montos)))
 
 
 
