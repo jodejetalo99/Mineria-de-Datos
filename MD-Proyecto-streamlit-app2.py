@@ -239,7 +239,7 @@ diccionario_anio = {'2013':datos_2013,'2014':datos_2014,
                     '2015':datos_2015,'2016':datos_2016,
                     '2017':datos_2017,'2018':datos_2018,
                     '2019':datos_2019}
-agno_recursos = st.selectbox("Año fiscal", [ '2013','2014','2015','2016','2017','2018','2019'])
+agno_recursos = st.selectbox("Montos del año fiscal", [ '2013','2014','2015','2016','2017','2018','2019'])
 
 st.dataframe(montosAnuales(diccionario_anio[agno_recursos],agno_recursos))
 
@@ -525,7 +525,8 @@ dicc_clasificacion = {'Otros proyectos':0.0, 'Acción/Salud': 1.0, 'Educación/A
                       'Urbanización':5.0, 'Cultura y Turismo':6.0, 'Asistencia Social':7.0,
                       'Deporte':8.0, 'Seguridad':9.0, 'Vivienda':10.0 , 'Comunicaciones':11.0,
                       'PRODIM':12.0}
-dicc_estatus = {'En Ejecución':0, 'Terminado':1, 'Cancelado':2, 'Suspendido':3}
+
+dicc_estatus = {'En Ejecución':0,'Cancelado':1,'Suspendido':2,'Terminado':3}
 
 categoria_proyecto =  st.selectbox("Categoría del Proyecto", ['Otros Proyectos','Acción/Salud', 'Adquisición/Educación', 
                                                               'Proyecto de inversión/Transportes y vialidades', 
@@ -546,7 +547,8 @@ clasificacion = st.selectbox("Clasificación", ['Otros proyectos','Acción/Salud
 
 estatus = st.selectbox("Estatus", ['En Ejecución','Terminado','Cancelado','Suspendido'])
 
-dicc_clave_inf = {0:'Sin contratos',1:'Sí',2:'No'}
+
+dicc_clave_inf = {1:'Sí',2:'No',3:'Sin contratos'}
 
 
 
@@ -556,7 +558,6 @@ prediccion_knn = knn.predict([[dicc_categoria_proyecto[categoria_proyecto],
                                dicc_clasificacion[clasificacion], dicc_estatus[estatus]]])
 
 st.write("Por medio de una predicción con KNN, ¿Lo más seguro es que la información del contrato, con estas características, esté disponible? ¿O acaso la información del proyecto involucra que sea sin contratos?", dicc_clave_inf[int(prediccion_knn)])
-
 
 # Regresión Logística
 st.header("Predicción con Regresión Logística")
@@ -593,7 +594,7 @@ dicc_categoria_proyecto2 = {'otros proyectos':0, 'acción/salud':1, 'adquisició
                            'deporte':8, 'seguridad':9, 'vivienda':10, 'comunicaciones':11}
 
 
-dicc_clave_inf2 = {'Sin contratos':0,'Sí':1,'No':2}
+dicc_clave_inf2 = {'Sí':1,'No':2,'Sin contratos':3}
 
 categoria_proyecto2 =  st.selectbox("Categoría del Proyecto", ['otros proyectos','acción/salud', 'adquisición/educación', 
                                                               'proyecto de inversión/transportes y vialidades', 
