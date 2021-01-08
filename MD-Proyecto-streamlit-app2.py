@@ -5,10 +5,14 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
+import folium
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import LabelEncoder
 from sklearn.linear_model import LogisticRegression
+from streamlit_folium import folium_static
+
+import pymc3 as pm
 
 
 import geopandas as gpd
@@ -490,6 +494,93 @@ p_montos = st.selectbox("Programas Montos", [ '2013','2014','2015','2016','2017'
 
 st.dataframe(programas_montos(int(p_montos)))
 
+## Mapa de Folium
+
+
+st.header("Referencia geografica de los proyectos reportados por año y estatus")
+st.write("Mostramos la información disponibles de los proyectos con sus coordenadas geográficas que si fueron registrados para poder ver la tendencia de estos y cuandos se cumplieron por ciclo fiscal y condición")
+
+# Creamos los diccionarios de datos y el dataframe en folium
+
+datos_dict_act = {2013:datos_2013_act,
+                  2014:datos_2014_act,
+                  2015:datos_2015_act,
+                  2016:datos_2016_act,
+                  2017:datos_2017_act,
+                  2018:datos_2018_act,
+                  2019:datos_2019_act}
+
+datos_dict_ant = {2013:datos_2013_ant,
+                  2014:datos_2014_ant,
+                  2015:datos_2015_ant,
+                  2016:datos_2016_ant,
+                  2017:datos_2017_ant,
+                  2018:datos_2018_ant,
+                  2019:datos_2019_ant}
+
+
+ciclo_fiscal = st.selectbox("Ciclo Fiscal", [ '2013','2014','2015','2016','2017','2018','2019'])
+
+data_ant = st.selectbox("Ciclos actuales o antereiores", [ 'Actuales','Anteriores'])
+
+
+if (data_ant=='Anteriores'):
+    df = datos_dict_ant[int(ciclo_fiscal)]
+else:
+    df = datos_dict_act[int(ciclo_fiscal)]
+
+pre_df = df[df.Georreferencia.notnull()]
+
+
+geo_df = gpd.GeoDataFrame(pre_df, geometry= gpd.points_from_xy(pre_df.Longitud, pre_df.Latitud))
+
+# Transformamos los datos a el tipo de datos que solicitamos para usar folium.
+#gdf.set_crs(epsg=4326, inplace=True)
+#geo_df = geo_df.set_crs(epsg=4326, inplace=True)
+#geo_df = geo_df.to_crs("EPSG:4326")
+geo_df.crs = "EPSG:4326"
+
+# Renombramos algunas de las columans del geo_dataframe porque no se leen de manera correcta en el mapa
+geo_df = geo_df.rename(columns={'Descripción del Programa Presupuestario':'programa_presupuestario',
+                       'Descripción del recurso':'origen_recurso',
+                       'Avance físico':'avance_fisico'}, errors="raise")
+
+# Traemos desde GitHub la informacióón de los datos en GeoJson de las alcaldias
+alcaldias_geo = gpd.read_file('Proyecto/alcaldias.shp')
+# transformamos los datos en formato necesitado
+alcaldias_geo = alcaldias_geo.to_crs("EPSG:4326")
+
+
+# Imprimimos el mapa en folium de los puntos que si estan geo referenciados
+m = folium.Map(location=[17.6260333, -95.5375005],tiles="cartodbpositron", zoom_start=9)
+folium.GeoJson(data=alcaldias_geo["geometry"]).add_to(m) 
+folium.GeoJson(data=geo_df, 
+               tooltip=folium.features.GeoJsonTooltip(fields=['Ciclo','Periodo','Nombre del  Proyecto',
+                                                              'programa_presupuestario',
+                                                              'DESC_UNIDAD_RESPONSABLE','origen_recurso',
+                                                              'avance_fisico','porcentaje_pagado'])).add_to(m)
+folium.LayerControl().add_to(m)
+folium_static(m)
+
+
+
+# center on Liberty Bell
+#m = folium.Map(location=[39.949610, -75.150282], zoom_start=16)
+
+# add marker for Liberty Bell
+#tooltip = "Liberty Bell"
+#folium.Marker(
+#    [39.949610, -75.150282], popup="Liberty Bell", tooltip=tooltip
+#).add_to(m)
+
+# call to render Folium map in Streamlit
+#folium_static(m)
+
+
+
+
+
+
 ### KNN
 st.header("Predicción con KNN")
 st.write("Dados la categoría, la alcaldía, la clasificación y el estatus del proyecto, predecir la información del contrato")
@@ -611,5 +702,69 @@ prediccion_logreg = logreg.predict([[dicc_categoria_proyecto2[categoria_proyecto
                                dicc_clave_inf2[clave_inf]]])
 
 st.write("Por medio de una predicción con Regresión Logística, ¿Lo más seguro es que el proyecto sea Terminado o Cancelado?", dicc_estatus2[int(prediccion_logreg)])
+
+
+st.header("Modelo Bayesiano para la proyección de Montos Aprobados-Comprometidos")
+
+st.write("Presentamos el resultado de usar algoritmos bayesianos para poder intentar predecir la correlación entre los *Montos Aprobados*  y los *Montos Modificados* ajustamos un modelo binomial para ver la distribución y ajustar los posibles valores de nuestros varialbes de intercepto")
+
+# Estandarizamos los datos
+sd_aprobado = datos_recursos['Monto Aprobado'].std()
+mean_aprobado = datos_recursos['Monto Aprobado'].mean()
+z_aprobado = (datos_recursos['Monto Aprobado'] - mean_aprobado) / sd_aprobado
+
+sd_modificado = datos_recursos['Monto Modificado'].std()
+mean_modificado = datos_recursos['Monto Modificado'].mean()
+z_modificado = (datos_recursos['Monto Modificado']-mean_modificado)/sd_modificado
+
+
+with pm.Model() as model:
+    # Hyperparametros del modelo
+    beta0 = pm.Normal('beta0', mu=0, tau=1/10**2)
+    beta1 = pm.Normal('beta1', mu=0, tau=1/10**2)
+    mu = beta0 + beta1*z_aprobado.ravel()
+    # distribucióón de la desviacion estandar
+    sigma = pm.Uniform('sigma', 10**-3, 10**3)
+    nu = pm.Exponential('nu', 1/29.)
+
+    # Verosimilitud de la normal
+    likelihood = pm.StudentT('likehood', nu, mu=mu, sd=sigma, observed = z_modificado.ravel())
+
+with model:
+    # Realizamos una cadena de 10 pasos que tengan una aceptacióón del 95% de confianza
+    trace = pm.sample(6, cores=-1)
+
+
+
+beta0 = trace['beta0'] + sd_modificado +mean_modificado - trace['beta1']*mean_aprobado/sd_aprobado
+beta1 = trace['beta1'] + (sd_modificado/sd_aprobado)
+sigma = trace['sigma']*sd_modificado
+# Ponemos en el dataframe todos los valores de beta0 y beta1 los cuales son la cadena que se ajusta
+# conrespecto a la nueva información a priori e informacióón poco informativa
+B = pd.DataFrame(np.c_[beta0,beta1], columns=['beta0','beta1'])
+
+y_est1 = B['beta0'][0] + B['beta1'][0]*datos_recursos['Monto Aprobado']
+y_est2 = B.iloc[-1,0] + B.iloc[-1,1]*datos_recursos['Monto Aprobado']
+
+
+# Betas obtenidas
+st.dataframe(B)
+
+fig = plt.figure(figsize=(13,9))
+
+ax = sns.scatterplot(datos_recursos['Monto Aprobado'], datos_recursos['Monto Modificado'], 
+                linewidths=1, edgecolor='k', zorder=10, label="Montos")
+
+plt.plot(datos_recursos['Monto Aprobado'], y_est1, color='red', label="Predicción 1")
+plt.plot(datos_recursos['Monto Aprobado'], y_est2, color='green', label="Predicción n")
+
+
+plt.legend()
+plt.title("Regresion Bayesiana de Montos Aprobados y Modificados")
+plt.xlabel("Motos Aprobados")
+plt.ylabel("Montos Modificados")
+plt.grid()
+
+st.pyplot(fig)
 
 
