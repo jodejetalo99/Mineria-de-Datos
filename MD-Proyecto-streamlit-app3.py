@@ -37,7 +37,7 @@ st.sidebar.info("Minería de Datos")
 st.sidebar.info("Aplicación creada por Misael López Sánchez y José de Jesús Tapia López")
 st.sidebar.info("Enero del 2021")
 st.image(dinero, width=700)
-st.title("Proyecto: Ciencia de Datos enfocada al estudio de proyectos financiados con recursos federales transferidos")
+st.title("Proyecto: Minería de Datos para analizar la transparencia y rendición de cuentas en proyectos financiados con recursos federales transferidos en la Ciudad de México")
 
 
 datos_recursos = pd.read_csv("Proyecto/recursos-federales-transferidos.csv")
@@ -450,43 +450,6 @@ select_recurso = st.selectbox("Monto por categoría", ['Descripción de la Categ
 
 st.dataframe(dict_frames[select_recurso])
 
-
-## Regresion lineal para poder observar los proyectos
-st.header("Regresión Lineal para detectar casos sospechosos de corrupción")
-st.write("Realizamos una regresión lineal sencilla donde contrastamos los Montos Comprometidos VS los Montos Pagados para de esta manera conocer la predicción del Monto Pagado con respecto a lo que se prometió originalmente.")
-
-st.write("**Interpretación**: La línea de la regresión lineal muestra la relación entre los montos pagados y comprometidos. La idea teóríca es que si un proyecto se pagó en su totalidad, se acerque a la línea roja de la regresión pues se pagó en su totalidad el proyecto.")
-
-st.write("Si un punto está por arriba de la regresión, es un proyecto que se pagó con recursos por arriba de lo comprometido.")
-st.write("Si un punto está por debajo de la regresióón, es un proyecto que aún no ha sido terminado de pagar en su totalidad.")
-
-
-# Implementamos la regresion lineal
-#@Mls21 Me falla porque no tengo la biblioteca statsmodel.api as sm, desbloquear esta linea e intentar desde ordenador propio
-
-agno_reg = st.selectbox("Años regresion", [ '2013','2014','2015','2016','2017','2018','2019'])
-def regresion_montos(agnio):
-    
-    hue = monto_sobrepasado(datos_dict[int(agnio)])
-    #hue = monto_sobrepasado(datos_2018_act)
-    sm.add_constant(hue['Monto Comprometido'])
-    parametros = sm.OLS(hue['Monto Pagado'], sm.add_constant(hue['Monto Comprometido'])).fit().params
-    print("parametros",parametros)
-    #sns.scatterplot(x='Monto Comprometido', y ='Monto Pagado', data=hue)
-    y_est = parametros[0] + parametros[1]*hue['Monto Comprometido']
-    # Graficamos una regresion lineal para el modelo
-    fig =plt.figure(figsize=(10,8))
-    plt.title("Regresión Lineal de los Montos")
-    plt.scatter(hue['Monto Comprometido'], hue['Monto Pagado'])
-    plt.plot(hue['Monto Comprometido'], y_est, color="red")
-    plt.grid()
-    plt.ylabel("Monto Pagado")
-    plt.xlabel("Monto Comprometido")
-    plt.legend()
-    return(fig)
-st.pyplot(regresion_montos(agno_reg))
-
-
 # Montos por programas. 
 
 st.header("Programas y montos Pagados")
@@ -712,6 +675,43 @@ prediccion_logreg = logreg.predict([[dicc_categoria_proyecto2[categoria_proyecto
 st.write("Por medio de una predicción con Regresión Logística, ¿Lo más seguro es que el proyecto sea Terminado o Cancelado?", dicc_estatus2[int(prediccion_logreg)])
 
 
+
+## Regresion lineal para poder observar los proyectos
+st.header("Regresión Lineal para detectar casos sospechosos de corrupción")
+st.write("Realizamos una regresión lineal sencilla donde contrastamos los Montos Comprometidos VS los Montos Pagados para de esta manera conocer la predicción del Monto Pagado con respecto a lo que se prometió originalmente.")
+
+st.write("**Interpretación**: La línea de la regresión lineal muestra la relación entre los montos pagados y comprometidos. La idea teóríca es que si un proyecto se pagó en su totalidad, se acerque a la línea roja de la regresión pues se pagó en su totalidad el proyecto.")
+
+st.write("Si un punto está por arriba de la regresión, es un proyecto que se pagó con recursos por arriba de lo comprometido.")
+st.write("Si un punto está por debajo de la regresióón, es un proyecto que aún no ha sido terminado de pagar en su totalidad.")
+
+
+# Implementamos la regresion lineal
+
+agno_reg = st.selectbox("Años regresion", [ '2013','2014','2015','2016','2017','2018','2019'])
+def regresion_montos(agnio):
+    
+    hue = monto_sobrepasado(datos_dict[int(agnio)])
+    #hue = monto_sobrepasado(datos_2018_act)
+    sm.add_constant(hue['Monto Comprometido'])
+    parametros = sm.OLS(hue['Monto Pagado'], sm.add_constant(hue['Monto Comprometido'])).fit().params
+    print("parametros",parametros)
+    #sns.scatterplot(x='Monto Comprometido', y ='Monto Pagado', data=hue)
+    y_est = parametros[0] + parametros[1]*hue['Monto Comprometido']
+    # Graficamos una regresion lineal para el modelo
+    fig =plt.figure(figsize=(10,8))
+    plt.title("Regresión Lineal de los Montos")
+    plt.scatter(hue['Monto Comprometido'], hue['Monto Pagado'])
+    plt.plot(hue['Monto Comprometido'], y_est, color="red")
+    plt.grid()
+    plt.ylabel("Monto Pagado")
+    plt.xlabel("Monto Comprometido")
+    plt.legend()
+    return(fig)
+st.pyplot(regresion_montos(agno_reg))
+
+
+### BAYES
 st.header("Modelo Bayesiano para la proyección de Montos Aprobados-Comprometidos")
 
 st.write("Presentamos el resultado de usar algoritmos bayesianos para poder intentar predecir la correlación entre los *Montos Aprobados*  y los *Montos Modificados*. Ajustamos un modelo binomial para ver la distribución y ajustar los posibles valores de nuestras variables de intercepto")
